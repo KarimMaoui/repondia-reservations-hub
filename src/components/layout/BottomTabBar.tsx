@@ -14,7 +14,6 @@ interface TabItem {
 const tabs: TabItem[] = [
   { id: 'requests', label: 'Requests', icon: CalendarCheck, path: '/dashboard' },
   { id: 'calls', label: 'Calls', icon: Phone, path: '/calls' },
-  { id: 'action', label: '', icon: Plus, path: '' }, // Center FAB
   { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages', badge: 3 },
   { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
 ];
@@ -53,22 +52,7 @@ export function BottomTabBar({ pendingCount = 3, unreadMessages = 3 }: BottomTab
             const active = isActive(tab.path);
             const badge = tab.id === 'requests' ? pendingCount : tab.id === 'messages' ? unreadMessages : undefined;
 
-            // Center FAB button
-            if (tab.id === 'action') {
-              return (
-                <motion.button
-                  key={tab.id}
-                  onClick={() => handleTabPress(tab)}
-                  className="relative -mt-6"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <div className="absolute inset-0 bg-primary/30 rounded-full animate-pulse-ring" />
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-float">
-                    <Icon className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
-                  </div>
-                </motion.button>
-              );
-            }
+            
 
             return (
               <motion.button
