@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CalendarCheck, Phone, MessageSquare, User, Plus } from 'lucide-react';
+import { CalendarCheck, MessageSquare, User } from 'lucide-react'; // Suppression de Phone et Plus
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -11,10 +11,10 @@ interface TabItem {
   badge?: number;
 }
 
+// Mise à jour : Uniquement les 3 onglets essentiels pour ton flux WhatsApp
 const tabs: TabItem[] = [
   { id: 'requests', label: 'Requests', icon: CalendarCheck, path: '/dashboard' },
-  { id: 'calls', label: 'Calls', icon: Phone, path: '/calls' },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages', badge: 3 },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages' },
   { id: 'profile', label: 'Profile', icon: User, path: '/profile' },
 ];
 
@@ -28,11 +28,7 @@ export function BottomTabBar({ pendingCount = 3, unreadMessages = 3 }: BottomTab
   const navigate = useNavigate();
 
   const handleTabPress = (tab: TabItem) => {
-    if (tab.id === 'action') {
-      // Center action button - navigate to new reservation or quick action
-      navigate('/dashboard');
-      return;
-    }
+    // La logique spécifique au bouton "Plus" a été supprimée
     navigate(tab.path);
   };
 
@@ -46,20 +42,19 @@ export function BottomTabBar({ pendingCount = 3, unreadMessages = 3 }: BottomTab
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
       <div className="glass border-t border-border/50">
-        <div className="flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom,8px)] pt-2">
-          {tabs.map((tab, index) => {
+        {/* Ajustement du padding pour un meilleur espacement avec 3 icônes */}
+        <div className="flex items-center justify-around px-6 pb-[env(safe-area-inset-bottom,12px)] pt-3">
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = isActive(tab.path);
             const badge = tab.id === 'requests' ? pendingCount : tab.id === 'messages' ? unreadMessages : undefined;
-
-            
 
             return (
               <motion.button
                 key={tab.id}
                 onClick={() => handleTabPress(tab)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center py-2 px-4 min-w-[64px]",
+                  "relative flex flex-col items-center justify-center py-2 px-4 min-w-[80px]",
                   "transition-colors duration-200"
                 )}
                 whileTap={{ scale: 0.95 }}
@@ -73,23 +68,25 @@ export function BottomTabBar({ pendingCount = 3, unreadMessages = 3 }: BottomTab
                     strokeWidth={active ? 2.5 : 2}
                   />
                   {badge && badge > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground border-2 border-white">
                       {badge > 9 ? '9+' : badge}
                     </span>
                   )}
                 </div>
                 <span 
                   className={cn(
-                    "mt-1 text-[10px] font-medium transition-colors duration-200",
+                    "mt-1 text-[11px] font-medium transition-colors duration-200",
                     active ? "text-primary" : "text-muted-foreground"
                   )}
                 >
                   {tab.label}
                 </span>
+                
+                {/* Indicateur visuel sous l'icône active */}
                 {active && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute -bottom-0.5 h-0.5 w-8 rounded-full bg-primary"
+                    className="absolute -bottom-1 h-1 w-6 rounded-full bg-primary"
                     initial={false}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   />
