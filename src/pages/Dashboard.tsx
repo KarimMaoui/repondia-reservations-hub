@@ -15,7 +15,6 @@ import { restaurant, dashboardStats } from '@/data/mockData';
 export default function Dashboard() {
   const navigate = useNavigate();
   
-  // Remplacement des mockData par un state vide au départ
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +32,6 @@ export default function Dashboard() {
 
     fetchReservations();
 
-    // Écoute WhatsApp en direct
     const channel = supabase
       .channel('dashboard-realtime')
       .on('postgres_changes', 
@@ -53,11 +51,10 @@ export default function Dashboard() {
 
   const pendingReservations = reservations.filter(r => r.status === 'pending');
 
-  // 2. ACTIONS RÉELLES SUR LA BASE DE DONNÉES
   const handleAccept = async (id: string) => {
     const { error } = await supabase
       .from('reservations')
-      .update({ status: 'confirmed' }) // On utilise 'confirmed' comme dans ton SQL
+      .update({ status: 'confirmed' })
       .eq('id', id);
 
     if (error) toast.error("Erreur lors de la confirmation");
@@ -83,7 +80,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="px-4 pt-4 pb-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-sm font-medium text-secondary">Welcome back</p>
@@ -99,12 +95,11 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-8">
           <StatsCard
             icon={<Calendar className="h-5 w-5" />}
             label="Pending"
-            value={pendingReservations.length} // Dynamique !
+            value={pendingReservations.length}
             variant="warning"
             onClick={() => {}}
           />
@@ -133,7 +128,6 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Quick Stats Banner */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,7 +145,6 @@ export default function Dashboard() {
           <p className="text-2xl font-bold text-primary">{dashboardStats.averageResponseTime}</p>
         </motion.div>
 
-        {/* Pending Requests Section */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-secondary">Pending Requests</h2>
           <Button
@@ -165,7 +158,6 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Reservation Cards */}
         <div className="space-y-3">
           <AnimatePresence mode='popLayout'>
             {pendingReservations.length > 0 ? (
@@ -174,12 +166,13 @@ export default function Dashboard() {
                   key={reservation.id}
                   reservation={{
                     ...reservation,
-                    // Adaptation des noms de colonnes SQL aux noms attendus par le composant
-                    guestName: reservation.customer_name,
-                    phoneNumber: reservation.customer_phone,
-                    date: reservation.reservation_date,
-                    guests: reservation.guests_count,
-                    time: "19:30" // On peut le rendre dynamique plus tard
+                    // SÉCURITÉ : On s'assure qu'aucune propriété n'est undefined
+                    customerName: reservation.customer_name || "Client Inconnu",
+                    guestName: reservation.customer_name || "Client Inconnu",
+                    phoneNumber: reservation.customer_phone || "Non renseigné",
+                    date: reservation.reservation_date || new Date().toISOString(),
+                    guests: reservation.guests_count || 0,
+                    time: "19:30"
                   }}
                   onAccept={() => handleAccept(reservation.id)}
                   onDecline={() => handleDecline(reservation.id)}
