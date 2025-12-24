@@ -134,4 +134,74 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Stats Banner */}
-        <motion
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/10 mb-8"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Avg. Response Time</p>
+              <p className="text-xs text-muted-foreground">{dashboardStats.weeklyAcceptRate}% acceptance rate</p>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-primary">{dashboardStats.averageResponseTime}</p>
+        </motion.div>
+
+        {/* Pending Requests Section */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-secondary">Pending Requests</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/history')}
+            className="text-muted-foreground"
+          >
+            View All
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+
+        {/* Reservation Cards */}
+        <div className="space-y-3">
+          <AnimatePresence mode='popLayout'>
+            {pendingReservations.length > 0 ? (
+              pendingReservations.map((reservation) => (
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={{
+                    ...reservation,
+                    // Adaptation des noms de colonnes SQL aux noms attendus par le composant
+                    guestName: reservation.customer_name,
+                    phoneNumber: reservation.customer_phone,
+                    date: reservation.reservation_date,
+                    guests: reservation.guests_count,
+                    time: "19:30" // On peut le rendre dynamique plus tard
+                  }}
+                  onAccept={() => handleAccept(reservation.id)}
+                  onDecline={() => handleDecline(reservation.id)}
+                  onClick={() => handleReservationClick(reservation.id)}
+                />
+              ))
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12 text-center"
+              >
+                <div className="p-4 rounded-full bg-success/10 mb-4">
+                  <Calendar className="h-8 w-8 text-success" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">All caught up!</h3>
+                <p className="text-sm text-muted-foreground">No pending requests at the moment.</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
