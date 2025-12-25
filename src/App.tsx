@@ -3,14 +3,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// PAGES
 import Index from "./pages/Index";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import ReservationDetail from "./pages/ReservationDetail";
-
 import Messages from "./pages/Messages";
 import MessageDetail from "./pages/MessageDetail";
-
+import Calendar from "./pages/Calendar"; // On importe la nouvelle page
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -29,7 +30,9 @@ const App = () => (
           <Route path="/reservation/:id" element={<ReservationDetail />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:id" element={<MessageDetail />} />
+          <Route path="/calendar" element={<Calendar />} /> {/* Nouvelle route */}
           <Route path="/profile" element={<Profile />} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
