@@ -10,28 +10,46 @@ import { toast } from "sonner";
 
 // IMPORT DE SUPABASE
 import { supabase } from '@/lib/supabase';
-import { restaurant, dashboardStats } from '@/data/mockData';
+import { dashboardStats } from '@/data/mockData';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restaurantName, setRestaurantName] = useState('Mon Restaurant');
 
-  // 1. CHARGEMENT ET TEMPS RÉEL
+  // 1. CHARGEMENT DES DONNÉES ET DU PROFIL
   useEffect(() => {
-    const fetchReservations = async () => {
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const fetchData = async () => {
+      // Récupérer l'utilisateur connecté
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (data) setReservations(data);
+      if (user) {
+        // A. Récupérer le nom du restaurant dans Profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('restaurant_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) setRestaurantName(profile.restaurant_name);
+
+        // B. Récupérer les réservations liées à cet utilisateur
+        const { data: resData } = await supabase
+          .from('reservations')
+          .select('*')
+          .eq('user_id', user.id) // Ségrégation des données
+          .order('created_at', { ascending: false });
+        
+        if (resData) setReservations(resData);
+      }
       setLoading(false);
     };
 
-    fetchReservations();
+    fetchData();
 
+    // C. Écoute temps réel (Realtime)
     const channel = supabase
       .channel('dashboard-realtime')
       .on('postgres_changes', 
@@ -39,7 +57,7 @@ export default function Dashboard() {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setReservations((prev) => [payload.new, ...prev]);
-            toast.success("Nouvelle demande WhatsApp !");
+            toast.success("Nouvelle demande reçue !");
           } else if (payload.eventType === 'UPDATE') {
             setReservations((prev) => prev.map(r => r.id === payload.new.id ? payload.new : r));
           }
@@ -71,93 +89,78 @@ export default function Dashboard() {
     else toast.success("Réservation refusée");
   };
 
-  const handleReservationClick = (id: string) => {
-    navigate(`/reservation/${id}`);
-  };
-
-  if (loading) return <div className="flex h-screen items-center justify-center">Chargement...</div>;
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    </div>
+  );
 
   return (
     <AppLayout>
       <div className="px-4 pt-4 pb-6">
+        {/* Header Dynamique */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-sm font-medium text-secondary">Welcome back</p>
-            <h1 className="text-2xl font-bold text-foreground">{restaurant.name}</h1>
+            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Tableau de bord</p>
+            <h1 className="text-2xl font-bold text-slate-900">{restaurantName}</h1>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/profile')}
-            className="rounded-full"
+            className="rounded-full bg-white shadow-sm border"
           >
-            <Settings className="h-5 w-5 text-muted-foreground" />
+            <Settings className="h-5 w-5 text-slate-600" />
           </Button>
         </div>
 
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 mb-8">
           <StatsCard
             icon={<Calendar className="h-5 w-5" />}
-            label="Pending"
+            label="En attente"
             value={pendingReservations.length}
             variant="warning"
             onClick={() => {}}
           />
           <StatsCard
             icon={<Calendar className="h-5 w-5" />}
-            label="Today"
+            label="Aujourd'hui"
             value={dashboardStats.todayReservations}
-            sublabel="reservations"
             variant="success"
-            onClick={() => navigate('/history')}
+            onClick={() => navigate('/calendar')}
           />
           <StatsCard
             icon={<Phone className="h-5 w-5" />}
-            label="Missed Calls"
-            value={dashboardStats.missedCalls}
+            label="Appels manqués"
+            value={0}
             variant="primary"
-            onClick={() => navigate('/calls')}
+            onClick={() => {}}
           />
           <StatsCard
             icon={<MessageSquare className="h-5 w-5" />}
-            label="Unread"
-            value={dashboardStats.unreadMessages}
-            sublabel="messages"
+            label="Messages"
+            value={0}
             variant="primary"
             onClick={() => navigate('/messages')}
           />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/10 mb-8"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Avg. Response Time</p>
-              <p className="text-xs text-muted-foreground">{dashboardStats.weeklyAcceptRate}% acceptance rate</p>
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-primary">{dashboardStats.averageResponseTime}</p>
-        </motion.div>
-
+        {/* Pending Requests Section */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-secondary">Pending Requests</h2>
+          <h2 className="text-lg font-bold text-slate-800">Demandes en attente</h2>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/history')}
-            className="text-muted-foreground"
+            onClick={() => navigate('/calendar')}
+            className="text-primary font-semibold"
           >
-            View All
+            Voir tout
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
 
+        {/* Reservation Cards */}
         <div className="space-y-3">
           <AnimatePresence mode='popLayout'>
             {pendingReservations.length > 0 ? (
@@ -166,7 +169,6 @@ export default function Dashboard() {
                   key={reservation.id}
                   reservation={{
                     ...reservation,
-                    // SÉCURITÉ : On s'assure qu'aucune propriété n'est undefined
                     customerName: reservation.customer_name || "Client Inconnu",
                     guestName: reservation.customer_name || "Client Inconnu",
                     phoneNumber: reservation.customer_phone || "Non renseigné",
@@ -176,20 +178,20 @@ export default function Dashboard() {
                   }}
                   onAccept={() => handleAccept(reservation.id)}
                   onDecline={() => handleDecline(reservation.id)}
-                  onClick={() => handleReservationClick(reservation.id)}
+                  onClick={() => navigate(`/reservation/${reservation.id}`)}
                 />
               ))
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 text-center"
+                className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-3xl border border-dashed"
               >
-                <div className="p-4 rounded-full bg-success/10 mb-4">
-                  <Calendar className="h-8 w-8 text-success" />
+                <div className="p-4 rounded-full bg-slate-50 mb-4">
+                  <Calendar className="h-8 w-8 text-slate-300" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">All caught up!</h3>
-                <p className="text-sm text-muted-foreground">No pending requests at the moment.</p>
+                <h3 className="font-semibold text-slate-900 mb-1">Tout est à jour !</h3>
+                <p className="text-sm text-slate-500">Aucune nouvelle demande pour le moment.</p>
               </motion.div>
             )}
           </AnimatePresence>
