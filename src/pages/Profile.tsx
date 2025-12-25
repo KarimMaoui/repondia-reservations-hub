@@ -1,197 +1,195 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  ArrowLeft, 
-  Building2, 
-  Clock, 
-  Phone, 
-  Mail, 
-  MapPin,
-  Bell,
-  Shield,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Users,
-  Palette
+  ArrowLeft, Building2, Clock, Phone, Mail, MapPin, 
+  Bell, Shield, HelpCircle, LogOut, ChevronRight, 
+  Users, Palette, Save, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { restaurant } from '@/data/mockData';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
+import { toast } from "sonner";
 import { cn } from '@/lib/utils';
-
-interface SettingsItemProps {
-  icon: React.ElementType;
-  label: string;
-  sublabel?: string;
-  onClick?: () => void;
-  variant?: 'default' | 'danger';
-}
-
-function SettingsItem({ icon: Icon, label, sublabel, onClick, variant = 'default' }: SettingsItemProps) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors text-left"
-    >
-      <div className={cn(
-        "p-2.5 rounded-xl",
-        variant === 'danger' ? "bg-destructive/10" : "bg-muted"
-      )}>
-        <Icon className={cn(
-          "h-5 w-5",
-          variant === 'danger' ? "text-destructive" : "text-muted-foreground"
-        )} />
-      </div>
-      <div className="flex-1">
-        <p className={cn(
-          "font-medium",
-          variant === 'danger' ? "text-destructive" : "text-foreground"
-        )}>
-          {label}
-        </p>
-        {sublabel && (
-          <p className="text-sm text-muted-foreground">{sublabel}</p>
-        )}
-      </div>
-      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </button>
-  );
-}
 
 export default function Profile() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // État des données du restaurant
+  const [profile, setProfile] = useState({
+    restaurant_name: '',
+    address: '',
+    phone: '',
+    email_pro: '',
+    opening_hours: '',
+    capacity: 0
+  });
+
+  // 1. Charger les données au démarrage
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) setProfile(data);
+      }
+      setLoading(false);
+    }
+    loadProfile();
+  }, []);
+
+  // 2. Sauvegarder les modifications
+  const handleSave = async () => {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(profile)
+      .eq('id', user.id);
+
+    if (error) toast.error("Erreur lors de la mise à jour");
+    else toast.success("Profil mis à jour !");
+    setSaving(false);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
+
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
-        {/* Header */}
-        <div className="sticky top-0 z-10 glass border-b border-border/50">
-          <div className="flex items-center gap-3 px-4 py-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
+      <div className="min-h-screen pb-20">
+        {/* Header avec bouton Sauvegarder */}
+        <div className="sticky top-0 z-10 glass border-b border-border/50 bg-white/80 backdrop-blur-md">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Paramètres</h1>
+            </div>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 rounded-xl">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Enregistrer
             </Button>
-            <h1 className="text-lg font-semibold text-foreground">Settings</h1>
           </div>
         </div>
 
-        {/* Restaurant Info Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-4 mt-4 p-5 card-elevated"
-        >
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20">
+        {/* Carte Restaurant Dynamique */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mx-4 mt-4 p-5 bg-white rounded-3xl border shadow-sm">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <Building2 className="h-8 w-8 text-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-foreground">{restaurant.name}</h2>
-              <p className="text-sm text-muted-foreground">Premium Partner</p>
+            <div className="flex-1">
+              <Input 
+                variant="ghost" 
+                className="text-xl font-bold p-0 h-auto focus-visible:ring-0 border-none"
+                value={profile.restaurant_name}
+                onChange={(e) => setProfile({...profile, restaurant_name: e.target.value})}
+              />
+              <p className="text-sm text-muted-foreground">Compte vérifié</p>
             </div>
           </div>
 
-          <div className="space-y-3 pt-3 border-t border-border/50">
-            <div className="flex items-center gap-3 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{restaurant.address}</span>
+          <div className="space-y-4 pt-4 border-t border-slate-50">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+              <Input 
+                className="h-8 text-sm border-none bg-slate-50 rounded-lg"
+                placeholder="Adresse du restaurant"
+                value={profile.address || ''}
+                onChange={(e) => setProfile({...profile, address: e.target.value})}
+              />
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{restaurant.phone}</span>
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+              <Input 
+                className="h-8 text-sm border-none bg-slate-50 rounded-lg"
+                placeholder="Numéro de téléphone"
+                value={profile.phone || ''}
+                onChange={(e) => setProfile({...profile, phone: e.target.value})}
+              />
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{restaurant.email}</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{restaurant.openingHours}</span>
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+              <Input 
+                className="h-8 text-sm border-none bg-slate-50 rounded-lg"
+                placeholder="Email de contact"
+                value={profile.email_pro || ''}
+                onChange={(e) => setProfile({...profile, email_pro: e.target.value})}
+              />
             </div>
           </div>
-
-          <Button variant="outline" className="w-full mt-4">
-            Edit Restaurant Info
-          </Button>
         </motion.div>
 
-        {/* Settings Sections */}
-        <div className="mt-6">
-          <h3 className="px-4 mb-2 text-sm font-semibold text-secondary">Preferences</h3>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-card border-y border-border/50 divide-y divide-border/50"
-          >
-            <SettingsItem
-              icon={Bell}
-              label="Notifications"
-              sublabel="Push, email, and SMS alerts"
-            />
-            <SettingsItem
-              icon={Clock}
-              label="Opening Hours"
-              sublabel="Set your availability"
-            />
-            <SettingsItem
-              icon={Users}
-              label="Capacity Settings"
-              sublabel={`${restaurant.averageCapacity} seats available`}
-            />
-            <SettingsItem
-              icon={Palette}
-              label="Appearance"
-              sublabel="Theme and display options"
-            />
-          </motion.div>
+        {/* Section Preferences Dynamique */}
+        <div className="mt-8">
+          <h3 className="px-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest">Préférences</h3>
+          <div className="bg-white border-y divide-y">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-blue-50 rounded-xl"><Clock className="h-5 w-5 text-blue-600" /></div>
+                <div>
+                  <p className="font-medium">Horaires d'ouverture</p>
+                  <input 
+                    className="text-sm text-slate-500 bg-transparent border-none p-0 focus:ring-0 w-full"
+                    value={profile.opening_hours || ''}
+                    onChange={(e) => setProfile({...profile, opening_hours: e.target.value})}
+                    placeholder="ex: 12:00-14:30, 19:00-22:30"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-purple-50 rounded-xl"><Users className="h-5 w-5 text-purple-600" /></div>
+                <div>
+                  <p className="font-medium">Capacité totale</p>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number"
+                      className="text-sm text-slate-500 bg-transparent border-none p-0 focus:ring-0 w-12"
+                      value={profile.capacity || 0}
+                      onChange={(e) => setProfile({...profile, capacity: parseInt(e.target.value)})}
+                    />
+                    <span className="text-sm text-slate-400 text-sm">couverts disponibles</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-6">
-          <h3 className="px-4 mb-2 text-sm font-semibold text-secondary">Support</h3>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-card border-y border-border/50 divide-y divide-border/50"
+        {/* Logout Section */}
+        <div className="mt-10 px-4">
+          <Button 
+            variant="destructive" 
+            className="w-full h-12 rounded-2xl gap-2 font-bold"
+            onClick={handleSignOut}
           >
-            <SettingsItem
-              icon={HelpCircle}
-              label="Help Center"
-              sublabel="FAQs and support articles"
-            />
-            <SettingsItem
-              icon={Shield}
-              label="Privacy & Security"
-              sublabel="Data protection settings"
-            />
-          </motion.div>
+            <LogOut className="h-5 w-5" />
+            Se déconnecter
+          </Button>
+          <p className="text-center text-xs text-slate-400 mt-6">Repondia v1.0.0 — 2025</p>
         </div>
-
-        <div className="mt-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-card border-y border-border/50"
-          >
-            <SettingsItem
-              icon={LogOut}
-              label="Sign Out"
-              variant="danger"
-            />
-          </motion.div>
-        </div>
-
-        {/* App Version */}
-        <p className="text-center text-xs text-muted-foreground pb-8">
-          Repondia v1.0.0
-        </p>
       </div>
     </AppLayout>
   );
