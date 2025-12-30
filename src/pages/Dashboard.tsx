@@ -28,7 +28,7 @@ export default function Dashboard() {
       if (user) {
         // A. Récupérer le nom du restaurant dans Profiles
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('restaurants')
           .select('restaurant_name')
           .eq('id', user.id)
           .single();
