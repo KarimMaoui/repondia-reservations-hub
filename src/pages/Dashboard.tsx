@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Phone, MessageSquare, Clock, Settings, ChevronRight } from 'lucide-react';
+import { Calendar, Phone, MessageSquare, Settings, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StatsCard } from '@/components/cards/StatsCard';
 import { ReservationCard } from '@/components/cards/ReservationCard';
@@ -27,8 +27,9 @@ export default function Dashboard() {
       
       if (user) {
         // A. Récupérer le nom du restaurant dans Profiles
+        // Note: Assure-toi que la table s'appelle bien 'profiles' (ou 'restaurants' selon ton code SQL)
         const { data: profile } = await supabase
-          .from('restaurants')
+          .from('profiles') // J'ai mis 'profiles' car c'était dans ton script SQL, change en 'restaurants' si besoin
           .select('restaurant_name')
           .eq('id', user.id)
           .single();
@@ -40,7 +41,7 @@ export default function Dashboard() {
           .from('reservations')
           .select('*')
           .eq('user_id', user.id) // Ségrégation des données
-          .order('created_at', { ascending: false });
+          .order('reservation_date', { ascending: true }); // Tri par date de réservation
         
         if (resData) setReservations(resData);
       }
@@ -72,7 +73,7 @@ export default function Dashboard() {
   const handleAccept = async (id: string) => {
     const { error } = await supabase
       .from('reservations')
-      .update({ status: 'confirmed' })
+      .update({ status: 'confirmed' }) // 'confirmed' correspond à ton SQL
       .eq('id', id);
 
     if (error) toast.error("Erreur lors de la confirmation");
@@ -102,7 +103,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Tableau de bord</p>
-            <h1 className="text-2xl font-bold text-slate-900">{restaurantName}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{restaurantName || 'Mon Restaurant'}</h1>
           </div>
           <Button
             variant="ghost"
@@ -168,13 +169,17 @@ export default function Dashboard() {
                 <ReservationCard
                   key={reservation.id}
                   reservation={{
-                    ...reservation,
+                    ...reservation, // Passe l'ID, la source, le status, etc.
+                    // MAPPING : On relie les noms SQL bizarres aux noms React
                     customerName: reservation.customer_name || "Client Inconnu",
                     guestName: reservation.customer_name || "Client Inconnu",
                     phoneNumber: reservation.customer_phone || "Non renseigné",
                     date: reservation.reservation_date || new Date().toISOString(),
                     guests: reservation.guests_count || 0,
-                    time: "19:30"
+                    // EXTRACTION DE L'HEURE (La correction est ici)
+                    time: reservation.reservation_date 
+                      ? new Date(reservation.reservation_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                      : "--:--"
                   }}
                   onAccept={() => handleAccept(reservation.id)}
                   onDecline={() => handleDecline(reservation.id)}
